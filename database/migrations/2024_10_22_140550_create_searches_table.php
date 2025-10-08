@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('searches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id');
+            $table->text('keywords');
             $table->timestamps();
         });
     }

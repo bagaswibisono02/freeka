@@ -70,6 +70,6 @@ class KategoryController extends Controller
     {
         $id = decrypt($kategory);
         kategory::find($id)->delete();
-        return back()->with('berhasil','Berhasil Hapus Kategori');
+        return back()->with('gagal','Berhasil Hapus Kategori');
     }
 }

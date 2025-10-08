@@ -1,143 +1,208 @@
 @extends('layouts.navUser')
+
 @section('body')
-    <!-- Main Content -->
-    <main class="">
+    <style>
+        .buy-now {
+            flex: 1;
+            padding: 8px 14px;
+            border-radius: 6px;
+            background-color: #9c27b0;
+            color: #fff;
+            text-align: center;
+            font-weight: 600;
+            text-decoration: none;
+            transition: 0.3s;
+        }
 
-       @if (!Request::get('page'))
-                  <!-- For You Section -->
-        <section class="for-you bg-daner p-3">
-            <h5 class="text-cente">Trending</h5>
-            <div class="d-flex flex-wrap">
-                @foreach ($trendings as $trending)
-                    <a class="col-5 m-2 m-md-0 col-sm-4 col-md-3 col-xl-2 p-0 p-sm-2"
-                        href="{{ route('detail.produk', [ 'slug' => Str::slug($trending->nama),'data' => Crypt::encrypt(['id' => encrypt($trending->id), 'nama' => $trending->nama, ])]) }}"
-                        class="text-decoration-none">
-                        <div class="product-card  "
-                            style="  background-position: center; background-repeat: no-repeat; background-size: cover;background-image:url('{{ env('APP_URL') . '/file?file=' . encrypt($trending->media[0]->file) }}')">
+        .buy-now:hover {
+            background-color: #7b1fa2;
+        }
 
-                            <div class="product-info d-flex flex-column justify-content-between">
-                                <h6 class="text-white outlined-text text-center rounded-3 p-1 bg-secondary"
-                                    style="background-color:black">{{ $trending->kategory->name }}</h6>
-                                <p class="  bg-white  border-2 border rounded-5 text-dark text-center d-inline">
-                                    @currency($trending->harga)</p>
+        .add-to-cart {
+            background-color: #6a1b9a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .add-to-cart:hover {
+            background-color: #4a148c;
+        }
+
+        .add-to-cart i {
+            font-size: 18px;
+        }
+
+        .product-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .product-image img {
+            transition: transform 0.3s;
+        }
+
+        .product-image:hover img {
+            transform: scale(1.05);
+        }
+    </style>
+
+    <main class="container">
+        <!-- Navigation -->
+        <nav class="main-nav">
+            <div class="container">
+                <div class="nav-container">
+                    <div class="relative group inline-block">
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition">
+                            <i class="fas fa-bars"></i>
+                            <span>Semua Kategori</span>
+                        </button>
+
+                        <!-- Mega Menu -->
+                        <div
+                            class="absolute left-0 top-full mt-2 w-[400px] bg-purple-600 text-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 z-50 pointer-events-auto">
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
+                                @foreach ($kategories as $kat)
+                                    <div>
+                                        <a href="{{ url('/?kategory=' . $kat->name) }}"
+                                            class="block mb-2 font-semibold hover:underline">
+                                            {{ $kat->name }}
+                                        </a>
+                                    </div>
+                                @endforeach
                             </div>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        </section>
-
-        <!-- Trending Section -->
-        <section class="trending">
-            <h5>For You</h5>
-            <div class="d-flex flex-wrap">
-                @foreach ($foryous as $foryou)
-                    <div class="product-item col-5 m-2 col-sm-4 col-md-3 col-xl-2  me-sm- m-md-2 position-relative "
-                        style="min-height: 380px">
-                        <div class="productk-detail position-relative">
-                            <span style="width: 30px; height:30px"
-                                class="d-flex align-items-center justify-content-center position-absolute p-1 top-0 mt-1 me-1 end-0 rounded-5 bg-white ">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                    class="bi bi-heart" viewBox="0 0 16 16">
-                                    <path
-                                        d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15" />
-                                </svg>
-                            </span>
-                            <img   onerror="this.src='{{ env('APP_URL') . '/file?file=' . encrypt('depositphotos_247872612-stock-illustration-no-image-available-icon-vector.webp') }}';" src="{{ env('APP_URL') . '/file?file=' . encrypt($foryou->media[0]->file) }}"
-                                alt="">
-                            <div class="position-relative p-2">
-                                <div class="mt-2 me-2"> <a
-                                        href="{{ route('detail.produk', ['slug'=> Str::slug($foryou->nama),'data' => Crypt::encrypt(['id' => encrypt($foryou->id), 'nama' => $foryou->nama])]) }}"
-                                        class="text-dark text-decoration-none">
-                                        {{ Str::limit($foryou->nama, 35, '...') }}</a></div>
-                                <div class="position-absolute top-50 end-0 translate-top me-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                        fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd"
-                                            d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <small class="p-2"> <span class="text-success"> Terjual</span>
-                                @if ($foryou->terjual == null)
-                                    0
-                                @else
-                                {{ $foryou->terjual }}
-                                @endif
-                                </small>
-                            <p class="p-2">@currency($foryou->harga)</p>
-                            <div class="d-flex justify-content-center">
-                                <a href="/checkout?produk={{ encrypt($foryou->id) }}"
-                                    class=" btn btn-dark rounded-5 text-center text-white">Beli Sekarang</a>
-                            </div>
-
                         </div>
                     </div>
-                @endforeach
 
 
-            </div>
-        </section>
-        <hr>
-       @endif
- 
-        <!-- Terbaru Section -->
-        <section class="trending">
-            <h5>Terbaru</h5>
-            <div class="d-flex flex-wrap">
-                @foreach ($terbaru as $foryou)
-                    <div class="product-item col-5 m-2 col-sm-4 col-md-3 col-xl-2  me-sm- m-md-2 position-relative "
-                        style="min-height: 380px">
-                        <div class="productk-detail position-relative">
-                            <span style="width: 30px; height:30px"
-                                class="d-flex align-items-center justify-content-center position-absolute p-1 top-0 mt-1 me-1 end-0 rounded-5 bg-white ">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                    class="bi bi-heart" viewBox="0 0 16 16">
-                                    <path
-                                        d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15" />
-                                </svg>
-                            </span>
-                            <img onerror="this.src='{{ env('APP_URL') . '/file?file=' . encrypt('depositphotos_247872612-stock-illustration-no-image-available-icon-vector.webp') }}';" src="{{ env('APP_URL') . '/file?file=' . encrypt($foryou->media[0]->file) }}"
-                                alt="">
-                            <div class="position-relative p-2">
-                                <div class="mt-2 me-2"> <a
-                                        href="{{ route('detail.produk', [ 'slug' => Str::slug($trending->nama),'data' => Crypt::encrypt(['id' => encrypt($foryou->id), 'nama' => $foryou->nama])]) }}"
-                                        class="text-dark text-decoration-none">
-                                        {{ Str::limit($foryou->nama, 35, '...') }}</a></div>
-                                <div class="position-absolute top-50 end-0 translate-top me-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                        fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd"
-                                            d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <small class="p-2"> <span class="text-success"> Terjual</span>
-                                @if ( $foryou->terjual == null)
-                                    0
-                                    @else
-                                    {{ $foryou->terjual }}
-                                @endif
-                                
-                               </small>
-                            <p class="p-2">@currency($foryou->harga)</p>
-                            <div class="d-flex justify-content-center">
-                                <a href="/checkout?produk={{ encrypt($foryou->id) }}"
-                                    class=" btn btn-dark rounded-5 text-center text-white">Beli Sekarang</a>
-                            </div>
 
-                        </div>
+                    <div class="nav-links">
+                        <a href="/">Home</a>
+                        <a href="">Flash Sale</a>
+                        <a href="#">Diskon Spesial</a>
+                        <a href="#">Produk Terbaru</a>
+                        <a href="#">Brand Terkenal</a>
+                        <a href="#">Top Up & Tagihan</a>
                     </div>
-                @endforeach
-
-
-            </div>
-            <div class="d-flex justify-content-center">
-                <div class="col-12 col-md-8 col-lg-6">
-                    {{ $terbaru->links() }}
                 </div>
             </div>
-            
+        </nav>
+        <!-- Flash Sale -->
+        <section class="flash-sale">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    <h2>Flash Sale</h2>
+                </div>
+                <a href="#" class="view-all">Lihat Semua <i class="fas fa-chevron-right"></i></a>
+            </div>
+
+            <div class="products-grid">
+                @foreach ($produks->take(10) as $produk)
+                    <div class="product-card">
+                        <a href="{{ route('produk.detail', $produk->slug) }}">
+                            <div class="product-image">
+                                <img src="{{ $produk->media->first()?->file
+                                    ? asset('storage/' . $produk->media->first()->file)
+                                    : asset('img/no-image.jpg') }}"
+                                    alt="{{ $produk->nama }}">
+                                <span class="product-badge">Flash Sale</span>
+                            </div>
+                        </a>
+                        <div class="product-info">
+                            <a href="{{ route('produk.detail', $produk->slug) }}">
+                                <div class="product-name">{{ $produk->nama }}</div>
+                            </a>
+                            <div class="product-price">
+                                <span class="current-price">Rp {{ number_format($produk->harga, 0, ',', '.') }}</span>
+                                <span class="original-price">Rp
+                                    {{ number_format($produk->harga * 1.2, 0, ',', '.') }}</span>
+                                <span class="discount">20%</span>
+                            </div>
+                            <div class="product-rating">
+                                <div class="stars">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star-half-alt"></i>
+                                </div>
+                                <span class="rating-count">(128)</span>
+                                <span class="sold">Terjual {{ rand(100, 1000) }}</span>
+                            </div>
+
+                            <div class="product-actions"
+                                style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+                                <a href="{{ route('checkout.beliLangsung', ['produk' => encrypt($produk->id)]) }}"
+                                    class="buy-now">
+                                    Beli
+                                </a>
+                                <form action="{{ route('keranjang.tambah', ['produk' => encrypt($produk->id)]) }}"
+                                    method="POST" style="margin:0;">
+                                    @csrf
+                                    <button type="submit" class="add-to-cart" title="Tambah ke Keranjang">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
+        <!-- Featured Products -->
+        <section class="featured-products">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>Rekomendasi Untuk Anda</h2>
+                </div>
+            </div>
+
+            <div class="products-grid">
+                @foreach ($produks as $produk)
+                    <div class="product-card">
+                        <a href="{{ route('produk.detail', $produk->slug) }}">
+                            <div class="product-image">
+                                <img src="{{ $produk->media->first()?->file
+                                    ? asset('storage/' . $produk->media->first()->file)
+                                    : asset('img/no-image.jpg') }}"
+                                    alt="{{ $produk->nama }}">
+                            </div>
+                        </a>
+                        <div class="product-info">
+                            <a href="{{ route('produk.detail', $produk->slug) }}">
+                                <div class="product-name">{{ $produk->nama }}</div>
+                            </a>
+                            <div class="product-price">
+                                <span class="current-price">Rp {{ number_format($produk->harga, 0, ',', '.') }}</span>
+                            </div>
+
+                            <div class="product-actions"
+                                style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+                                <a href="{{ route('checkout.beliLangsung', ['produk' => encrypt($produk->id)]) }}"
+                                    class="buy-now">
+                                    Beli
+                                </a>
+                                <form action="{{ route('keranjang.tambah', ['produk' => $produk->id]) }}" method="POST"
+                                    style="margin:0;">
+                                    @csrf
+                                    <button type="submit" class="add-to-cart" title="Tambah ke Keranjang">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </section>
     </main>
 @endsection

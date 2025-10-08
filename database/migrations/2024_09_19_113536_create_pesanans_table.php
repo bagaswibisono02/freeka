@@ -18,13 +18,14 @@ return new class extends Migration
             $table->foreignId('keuangan_id')->nullable();
             $table->integer('jumlah')->default('1');
             $table->foreignId('alamat_penerima_id')->nullable();
-            $table->text('resi')->nullable();
+            // $table->text('resi')->nullable();
             $table->text('catatan')->nullable();
-            $table->text('jasa_kirim')->nullable();
-            $table->text('link_beli')->nullable();
-            $table->text('varian')->nullable();
-            $table->text('snap_token')->nullable();
-            $table->text('status');
+            $table->text('hargatotal')->nullable();
+            // $table->text('link_beli')->nullable();
+            // $table->text('varian')->nullable();
+            // $table->text('jasa_kirim')->nullable();
+            $table->text('status_pembayaran');
+            $table->text('response_faspay')->nullable();
             $table->timestamps();
         });
     }

@@ -3,112 +3,175 @@
 namespace App\Http\Controllers;
 
 use App\Models\alamat_penerima;
+use Illuminate\Support\Facades\DB;
 use App\Models\kategory;
 use App\Models\keuangan;
+use App\Models\notifikasi;
 use App\Models\konfirmasiPembayaran;
+use Illuminate\Support\Facades\Log;
 use App\Models\mediaReview;
 use App\Models\pengiriman;
 use App\Models\pesanan;
 use App\Models\produk;
+use App\Models\itemPesanan;
 use App\Models\provinsi;
 use App\Models\reviewProduk;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Midtrans\Config;
-
+use Illuminate\Support\Facades\Http;
+use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Validator;
 class PesananController extends Controller
 {
-    public function __construct()
-    {
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$isProduction = env('MIDTRANS_IS_PRODUCTION');
-        Config::$isSanitized = env("MIDTRANS_IS_SANITIZED");
-        Config::$is3ds = env("MIDTRANS_IS_3DS");
-    }
-
     public function createSnapToken(Request $request)
     {
+        $user = Auth::user();
 
-        $request->validate([
-            'penerima' => ['required'],
-            'varian' => ['required'],
-        ]);
-        // Mendapatkan URL sebelumnya
-        $previousUrl = url()->previous();
+        // 🔹 Validasi Input
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'produk' => 'required',
+                'jumlahBeli' => 'required|integer|min:1',
+                'varian' => 'nullable|string|max:255',
+                'catatan' => 'nullable|string|max:255',
+                'penerimaPesanan' => 'required',
+                'metode' => 'required|string', // metode pembayaran Tripay
+            ],
+            [
+                'produk.required' => 'Produk tidak valid.',
+                'jumlahBeli.required' => 'Jumlah pembelian harus diisi.',
+                'jumlahBeli.integer' => 'Jumlah pembelian harus berupa angka.',
+                'jumlahBeli.min' => 'Minimal pembelian 1 item.',
+                'penerimaPesanan.required' => 'Alamat pengiriman belum dipilih.',
+                'metode.required' => 'Pilih metode pembayaran.',
+            ],
+        );
 
-        if (strpos($previousUrl, 'keranjang')) {
-            $pesanan_id = decrypt($request->keranjang);
-            $pesanan = pesanan::find($pesanan_id);
-            $produk = produk::find($pesanan->produk->id);
-            $total = floatval($request->jumlahBeli) * floatval($pesanan->produk->harga);
-            $qtty = $pesanan->jumlah;
-
-            $pesanan->update([
-                'alamat_penerima_id' => decrypt($request->penerima),
-                'jumlah' => $request->jumlahBeli,
-                'catatan' => $request->catatan,
-                'varian' => $request->varian,
-            ]);
-            $id = $produk->id;
-        } else {
-            $id = decrypt($request->produk);
-            $produk = produk::find($id);
-            $total = floatval($produk->harga) * floatval($request->jumlahBeli);
-            $masukan = pesanan::create([
-                'user_id' => Auth::user()->id,
-                'produk_id' => $id,
-                'alamat_penerima_id' => decrypt($request->penerima),
-                'jumlah' => $request->jumlahBeli,
-                'catatan' => $request->catatan,
-                'varian' => $request->varian,
-                'status' => 'tunggubayar',
-            ]);
-
-            $pesanan_id = $masukan->id;
-            $qtty = $request->jumlah;
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
         }
 
-        /*Query ke api */
-        // try {
+        // 🔹 Cek apakah datang dari keranjang
+        $fromCart = Str::contains(url()->previous(), 'keranjang=');
 
-        //     $params = array(
-        //         'transaction_details' => array(
-        //             'order_id' => $pesanan_id . '-' . time(),
-        //             'gross_amount' => $total,
-        //         ),
-        //         // 'item_details' => array(
-        //         //     'id' => $id,
-        //         //     'price' => floatval($total),
-        //         //     'quantity' => intval($qtty),
-        //         //     'name' => $produk->nama,
-        //         // ),
-        //         'customer_details' => array(
-        //             'first_name' => Auth::user()->name,
-        //             'email' => Auth::user()->email,
-        //             'phone' => Auth::user()->contact,
-        //         ),
-        //     );
+        try {
+            if ($fromCart) {
+                // ==== CASE: dari keranjang ====
+                $pesananId = decrypt($request->keranjang);
+                $pesanan = Pesanan::findOrFail($pesananId);
+                $produk = $pesanan->produk;
+                $total = $produk->harga * $request->jumlahBeli;
 
-        //     $snapToken = Snap::getSnapToken($params);
-        //     pesanan::find($pesanan_id)->update([
-        //         'snap_token' => $snapToken,
-        //         'status' => 'tunggubayar',
-        //     ]);
+                $pesanan->update([
+                    'alamat_penerima_id' => decrypt($request->penerimaPesanan),
+                    'jumlah' => $request->jumlahBeli,
+                    'catatan' => $request->catatan,
+                    'hargatotal' => $total,
+                    'status_pembayaran' => 'tunggubayar',
+                ]);
 
-        //     $encrypt = encrypt($pesanan_id);
+                ItemPesanan::updateOrCreate(
+                    ['pesanan_id' => $pesanan->id],
+                    [
+                        'produk_id' => $produk->id,
+                        'jumlah' => $request->jumlahBeli,
+                        'total_harga' => $total,
+                    ],
+                );
+            } else {
+                // ==== CASE: langsung beli produk ====
+                $produk = Produk::findOrFail(decrypt($request->produk));
+                $total = $produk->harga * $request->jumlahBeli;
 
-        //     return redirect('/pembayaran?keranjang=' . $encrypt);
-        // } catch (\Exception $e) {
-        //     return back()->with('error', $e->getMessage());
-        // }
+                $pesanan = Pesanan::create([
+                    'user_id' => $user->id,
+                    'produk_id' => $produk->id,
+                    'alamat_penerima_id' => decrypt($request->penerimaPesanan),
+                    'jumlah' => $request->jumlahBeli,
+                    'catatan' => $request->catatan,
+                    'hargatotal' => $total,
+                    'status_pembayaran' => 'tunggubayar',
+                ]);
 
-        return redirect('/pembayaran?keranjang=' . encrypt($pesanan_id));
+                ItemPesanan::create([
+                    'pesanan_id' => $pesanan->id,
+                    'produk_id' => $produk->id,
+                    'jumlah' => $request->jumlahBeli,
+                    'total_harga' => $total,
+                ]);
+            }
+
+            // 🔹 Generate invoice unik
+            $invoice = 'INV-' . time() . '-' . strtoupper(Str::random(6));
+
+            // 🔹 Siapkan payload Tripay
+            $merchantCode = config('services.tripay.merchant_code');
+            $apiKey = config('services.tripay.api_key');
+            $privateKey = config('services.tripay.private_key');
+            $callbackUrl = config('services.tripay.callback_url');
+
+            $signature = hash_hmac('sha256', $merchantCode . $invoice . $pesanan->hargatotal, $privateKey);
+
+            $payload = [
+                'method' => $request->metode,
+                'merchant_ref' => $invoice,
+                'amount' => $pesanan->hargatotal,
+                'customer_name' => $user->name,
+                'customer_email' => $user->email,
+                'customer_phone' => $user->contact ?? '08123456789',
+                'order_items' => [
+                    [
+                        'sku' => $produk->id,
+                        'name' => $produk->nama,
+                        'price' => $produk->harga,
+                        'quantity' => $request->jumlahBeli,
+                    ],
+                ],
+                'callback_url' => $callbackUrl,
+                'return_url' => url('/checkout/success'),
+                'expired_time' => now()->addHours(24)->timestamp,
+                'signature' => $signature,
+            ];
+
+            // 🔹 Kirim request ke Tripay
+            $url = config('services.tripay.mode') === 'live' ? 'https://tripay.co.id/api/transaction/create' : 'https://tripay.co.id/api-sandbox/transaction/create';
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])->post($url, $payload);
+
+            $result = $response->json();
+
+            if (!isset($result['data'])) {
+                return back()->with('error', 'Gagal membuat transaksi Tripay: ' . ($result['message'] ?? 'Unknown error.'));
+            }
+
+            // 🔹 Simpan response Tripay ke database
+            $pesanan->update([
+                'response_faspay' => json_encode($result),
+                'tripay_reference' => $result['data']['reference'],
+            ]);
+            // buat notifikasi
+            notifikasi::create([
+                'user_id' => Auth::id(),
+                'title' => 'Order Notification - Pesanan Berhasil Dibuat',
+                'message' => 'Pesanan #' . $result['data']['reference'] . ' berhasil dibuat. Silakan cek detail pesanan Anda.',
+                'is_read' => false,
+            ]);
+
+            // 🔹 Redirect ke halaman pembayaran Tripay
+            return redirect($result['data']['checkout_url']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
     public function checkout(Request $request)
     {
-
         if ($request->keranjang) {
             $id_pesanan = decrypt($request->keranjang);
             $keranjang = pesanan::find($id_pesanan);
@@ -117,21 +180,17 @@ class PesananController extends Controller
             $id_produk = decrypt($request->produk);
             $produk = produk::find($id_produk);
         } else {
-
             return back();
         }
 
         return view('produk.checkout', [
             'produk' => $produk,
-            'penerimas' => alamat_penerima::where('user_id', Auth::User()->id)->with(['kelurahan.kecamatan.kab_kota.provinsi'])->get(),
-            'kategorys' => kategory::all(),
-            'provinsis' => provinsi::orderBy('nama', 'ASC')->get(),
+            'penerimas' => alamat_penerima::where('user_id', Auth::User()->id)->get(),
         ]);
     }
 
     public function pembayaran(Request $request)
     {
-
         $pesanan = decrypt($request->keranjang);
 
         return view('produk.pembayaran', [
@@ -142,15 +201,32 @@ class PesananController extends Controller
 
     public function index(Request $request)
     {
-
         $pesanan = pesanan::FilterId(request()->query('query'))
             ->FilterStatus(request()->query('status'))
-        // ->FilterTanggal(request()->query('start_date'),request()->query('end_date'))
+            ->orderBy('created_at', 'asc')
             ->get();
 
         return view('pesanan.index', [
             'pesanans' => $pesanan,
+            'kurirs' => $this->getKurir(),
         ]);
+    }
+    public function getKurir()
+    {
+        $apiKey = 'ea97564c270da5b3e5eddc8db8f45dfc8165641b7befdb4f81df188612378a9e'; // ganti dengan API key asli
+        $response = Http::get('https://api.binderbyte.com/v1/list_courier', [
+            'api_key' => $apiKey,
+        ]);
+
+        // Cek apakah responsenya sukses
+        if ($response->successful()) {
+            $data = $response->json();
+
+            // Ambil list courier dari response
+            return $data;
+        } else {
+            return response()->json(['error' => 'Gagal mengambil data kurir'], 500);
+        }
     }
 
     public function update(Request $request, $ids)
@@ -174,7 +250,6 @@ class PesananController extends Controller
             'pesanan' => pesanan::find($keranjang),
             'kategorys' => kategory::all(),
         ]);
-
     }
 
     public function pengiriman($pesanan_id, $status)
@@ -187,16 +262,28 @@ class PesananController extends Controller
         if ($masukan) {
             return true;
         } else {
-            return back()->with('pesan', "eror saat memasukan data ");
+            return back()->with('pesan', 'eror saat memasukan data ');
         }
-
     }
 
     public function resi(Request $request)
     {
+        $apiKey = 'ea97564c270da5b3e5eddc8db8f45dfc8165641b7befdb4f81df188612378a9e';
+        $courier = 'jnt';
+        $awb = 'JX5140998027';
+
+        $response = Http::get('https://api.binderbyte.com/v1/track', [
+            'api_key' => $apiKey,
+            'courier' => $courier,
+            'awb' => $awb,
+        ]);
+
+        // dd($response->json())
+
         $id_pesanan = decrypt($request->pesanan);
         return view('pesanan.resi', [
             'pesanan' => pesanan::find($id_pesanan),
+            'resi' => $response['data']['history'], // array perjalanan
         ]);
     }
 
@@ -278,7 +365,6 @@ class PesananController extends Controller
         ]);
 
         return redirect('/panel?filter=diproses');
-
     }
 
     public function terima(Request $request)
@@ -295,9 +381,9 @@ class PesananController extends Controller
             'nominal' => $pesanan->jumlah * $pesanan->produk->harga,
             'jenis_transaksi' => 'masuk',
         ]);
-        $produk =  produk::find($pesanan->produk->id);
+        $produk = produk::find($pesanan->produk->id);
         $produk->update([
-            'terjual'=> $produk->terjual + 1
+            'terjual' => $produk->terjual + 1,
         ]);
 
         return back();
@@ -340,16 +426,16 @@ class PesananController extends Controller
     {
         return view('pesanan.edit', [
             'provinsis' => provinsi::orderBy('nama', 'ASC')->get(),
-            'penerimas' => alamat_penerima::where('user_id', Auth::User()->id)->with(['kelurahan.kecamatan.kab_kota.provinsi'])->get(),
+            'penerimas' => alamat_penerima::where('user_id', Auth::User()->id)
+                ->with(['kelurahan.kecamatan.kab_kota.provinsi'])
+                ->get(),
             'pesanan' => pesanan::find(decrypt($idproduk)),
             'kategorys' => kategory::all(),
-
         ]);
     }
 
     public function editPesanan(Request $request)
     {
-
         pesanan::find(decrypt($request->keranjang))->update([
             'jumlah' => $request->jumlahBeli,
             'alamat_penerima_id' => decrypt($request->penerima),
@@ -362,7 +448,6 @@ class PesananController extends Controller
 
     public function tambahReview(Request $request)
     {
-
         $pesanan = pesanan::find(decrypt($request->pesanan));
         $produk = $pesanan->produk;
         // dd($produk);
@@ -376,13 +461,11 @@ class PesananController extends Controller
         ]);
 
         if ($request->file('fotoReview')) {
-
             foreach ($request->file('fotoReview') as $media) {
                 mediaReview::create([
-                    "mediaReview_id" => $review->id,
+                    'mediaReview_id' => $review->id,
                     'file' => $media->store('foto-review', 'public'),
                 ]);
-
             }
         }
 
@@ -391,12 +474,10 @@ class PesananController extends Controller
 
     public function editReview(Request $request)
     {
-// dd($request);
+        // dd($request);
         $pesanan = pesanan::find(decrypt($request->pesanan));
-       
 
         $review = $pesanan->review;
-        
 
         reviewProduk::find($review->id)->update([
             // 'produk_id'=> $produk->id,
@@ -420,14 +501,107 @@ class PesananController extends Controller
 
             foreach ($request->file('fotoReview') as $media) {
                 mediaReview::create([
-                    "mediaReview_id" => $review->id,
+                    'mediaReview_id' => $review->id,
                     'file' => $media->store('foto-review', 'public'),
                 ]);
-
             }
         }
 
         return redirect('/panel');
     }
 
+    public function handle(Request $request)
+    {
+        $payload = $request->getContent();
+        $signatureHeader = $request->header('X-Callback-Signature');
+        $secret = env('TRIPAY_PRIVATE_KEY');
+
+        // 1️⃣ Cek signature
+        if (empty($signatureHeader) || empty($secret)) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $computedSignature = hash_hmac('sha256', $payload, $secret);
+        if (!hash_equals($computedSignature, $signatureHeader)) {
+            Log::warning('Tripay callback: invalid signature');
+            return response()->json(['success' => false, 'message' => 'Invalid signature'], 403);
+        }
+
+        // 2️⃣ Decode data Tripay
+        $data = json_decode($payload, true);
+        if (!isset($data['reference']) || !isset($data['status'])) {
+            Log::error('Tripay callback: incomplete data');
+            return response()->json(['success' => false, 'message' => 'Bad request'], 400);
+        }
+
+        $reference = $data['reference'];
+        $merchantRef = $data['merchant_ref'] ?? null;
+        $statusTripay = strtoupper($data['status']);
+
+        Log::info('Tripay callback received', [
+            'reference' => $reference,
+            'status' => $statusTripay,
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $orders = DB::table('pesanans')->get();
+            $targetOrder = null;
+
+            foreach ($orders as $order) {
+                $json = json_decode($order->response_faspay, true);
+                if (!$json || !isset($json['data'])) {
+                    continue;
+                }
+
+                $ref = $json['data']['reference'] ?? null;
+                $mref = $json['data']['merchant_ref'] ?? null;
+
+                if ($ref === $reference || $mref === $merchantRef) {
+                    $targetOrder = $order;
+                    break;
+                }
+            }
+
+            if (!$targetOrder) {
+                Log::warning('Tripay callback: order not found', [
+                    'reference' => $reference,
+                    'merchant_ref' => $merchantRef,
+                ]);
+                DB::commit();
+                return response()->json(['success' => true], 200); // tetap OK ke Tripay
+            }
+
+            $statusMap = [
+                'PAID' => 'paid',
+                'UNPAID' => 'pending',
+                'EXPIRED' => 'expired',
+                'FAILED' => 'failed',
+            ];
+
+            $status = $statusMap[$statusTripay] ?? 'pending';
+
+            DB::table('pesanans')
+                ->where('id', $targetOrder->id)
+                ->update([
+                    'status_pembayaran' => $status,
+                    'updated_at' => now(),
+                ]);
+
+            DB::commit();
+
+            Log::info('Tripay callback updated', [
+                'id' => $targetOrder->id,
+                'status_pembayaran' => $status,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Tripay callback error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Internal error'], 500);
+        }
+
+        // ✅ Respons sesuai harapan Tripay
+        return response()->json(['success' => true], 200);
+    }
 }

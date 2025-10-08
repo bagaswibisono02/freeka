@@ -1,0 +1,45 @@
+[29-Nov-2024 22:48:55 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/public/../../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/public/index.php on line 16
+[29-Nov-2024 22:48:55 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/public/../../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/public/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/public/index.php on line 16
+[29-Nov-2024 22:49:06 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/public/../../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/public/index.php on line 16
+[29-Nov-2024 22:49:06 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/public/../../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/public/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/public/index.php on line 16
+[29-Nov-2024 22:59:37 Asia/Jakarta] PHP Warning:  require(/home/bagg6918/public_html/bagaswibisono.store/../../../winurova/vendor/autoload.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 13
+[29-Nov-2024 22:59:37 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../../winurova/vendor/autoload.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:13
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 13
+[29-Nov-2024 22:59:40 Asia/Jakarta] PHP Warning:  require(/home/bagg6918/public_html/bagaswibisono.store/../../../winurova/vendor/autoload.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 13
+[29-Nov-2024 22:59:40 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../../winurova/vendor/autoload.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:13
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 13
+[29-Nov-2024 22:59:58 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 22:59:58 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 22:59:59 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 22:59:59 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 23:00:27 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 23:00:27 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 23:00:28 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 23:00:28 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 23:00:30 Asia/Jakarta] PHP Warning:  require_once(/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php): Failed to open stream: No such file or directory in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16
+[29-Nov-2024 23:00:30 Asia/Jakarta] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bagg6918/public_html/bagaswibisono.store/../../winurovabootstrap/app.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bagg6918/public_html/bagaswibisono.store/index.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/bagg6918/public_html/bagaswibisono.store/index.php on line 16

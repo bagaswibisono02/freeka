@@ -8,11 +8,19 @@
         "php": "^8.2",
         "itsgoingd/clockwork": "^5.2",
         "laravel/framework": "^11.9",
+        "laravel/reverb": "^1.5",
         "laravel/sanctum": "^4.0",
+        "laravel/scout": "^10.15",
         "laravel/tinker": "^2.9",
         "livewire/livewire": "^3.5",
         "maatwebsite/excel": "^3.1",
-        "midtrans/midtrans-php": "^2.5"
+        "meilisearch/meilisearch-php": "^1.16",
+        "mews/captcha": "^3.4",
+        "midtrans/midtrans-php": "^2.5",
+        "munafio/chatify": "^1.6",
+        "predis/predis": "^3.0",
+        "sastrawi/sastrawi": "^1.2",
+        "spatie/laravel-sitemap": "^7.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -1,0 +1,7 @@
+.clickable-item {
+	cursor: pointer; /* Menambahkan efek tangan */
+  }
+
+  .clickable-item:hover{
+	background-color: rgb(233, 233, 233);
+  }

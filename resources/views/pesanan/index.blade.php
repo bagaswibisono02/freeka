@@ -1,5 +1,6 @@
 @extends('layouts.sidebar')
 @section('content')
+{{-- @dd($kurirs) --}}
     <div class="container">
         <form action="" method="GET" class="m-2 container col-11">
             <div class="d-flex justify-content-between">
@@ -112,7 +113,7 @@
                                                 d="M1 7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h4.5a.5.5 0 0 0 0-1H1V8h4.5a.5.5 0 0 0 0-1zm9.5 0a.5.5 0 0 0 0 1H15v2h-4.5a.5.5 0 0 0 0 1H15a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z" />
                                         </svg>
                                     </span>
-                                    <span class="text-danger">Tunggu Resi</span>
+                                    <span class="text-danger">Menunggu Resi</span>
 
                                     <!-- Modal -->
                                     <div class="modal fade" id="exampleModa{{ $pesanan->id }}" tabindex="-1"
@@ -138,8 +139,20 @@
                                                                 <input type="text" class="form-control" required
                                                                     name="resi" value="{{ $pesanan->resi }}" required
                                                                     placeholder="Masukan Resi / Status"><br>
-                                                                <input type="text" class="form-control"
-                                                                    name="jasa_kirim" placeholder="Jasa Kirim"><br>
+                                                                <select name="jasa_kirim" class="form-control"
+                                                                    id="">
+                                                                    <option>=Pilih Jasa Kirim=</option>
+                                                                    @if (count($kurirs) > 0)
+                                                                        @foreach ($kurirs as $k)
+                                                                            <option value="{{ $k['code'] }}">{{ $k['description'] }}</option>
+                                                                        @endforeach
+                                                                    @else
+                                                                      <option>List Api Error</option>
+                                                                    @endif
+
+                                                                </select>
+
+                                                                <br>
                                                                 <input type="text" class="form-control"
                                                                     name="link_beli" value="{{ $pesanan->link_beli }}"
                                                                     placeholder="Link Beli">
@@ -173,7 +186,12 @@
                                             <path
                                                 d="M1 7a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h4.5a.5.5 0 0 0 0-1H1V8h4.5a.5.5 0 0 0 0-1zm9.5 0a.5.5 0 0 0 0 1H15v2h-4.5a.5.5 0 0 0 0 1H15a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z" />
                                         </svg>
-                                        <span class="text-danger">Tunggu Slip</span>
+                                        @if ($pesanan->konfirmasiPembayaran)
+                                             <span class="text-danger">Tunggu Verifikasi</span>
+                                        @else
+                                               <span class="text-danger">Tunggu Slip</span>
+                                        @endif
+                                     
                                     </span>
 
                                     <!-- Modal -->

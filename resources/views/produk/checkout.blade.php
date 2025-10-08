@@ -1,397 +1,741 @@
 @extends('layouts.navUser')
 @section('body')
-    {{-- @dd($penerimas) --}}
     @if (session('error'))
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded" role="alert">
             {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-    <div class="container d-flex justify-content-center">
-        <div class="bg-white d-flex justify-content-center col-12 m-2">
-            <div class="col-10">
-                <h4 class="m-2 text-center">Check Out</h4>
-                <div class="p-3" style="background-color: rgb(236, 236, 236)">
-                    <h4></h4>
-                    <h5> Alamat Pengiriman : <span id="alamatfix"></span> <!-- Button trigger modal -->
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleM">
-                            Ubah
-                        </button>
-                    </h5>
-                    @error('penerima')
-                    <span class="text-danger">
-                        Pilih Alamat Pengiriman
-                    </span>
-                    @enderror
-                    <small class="text-danger">Pasitkan Alamat Anda Terdaftar Di Daerah Gratis Ongkir Agar Tidak Terjadi Pembatalan</small>
-                    
 
-                    <!-- Modal -->
-                    <div class="modal fade" id="exampleM" tabindex="-1" aria-labelledby="exampleModalLabel"
-                        aria-hidden="true">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h1 class="modal-title fs-5" id="exampleModalLabel">Atur Alamat Pengiriman
-                                    </h1>
-                                    <button id="tutup" type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <form action="/penerima" method="post" id="tambah-penerima" style="display: none">
-                                        @csrf
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Nama
-                                                Penerima</span>
-                                            <input type="text" class="form-control" placeholder="Nama Penerima"
-                                                aria-label="Username" name="nama" aria-describedby="basic-addon1">
-                                        </div>
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Contact</span>
-                                            <input type="text" name="contact" class="form-control"
-                                                placeholder="Nama Penerima" aria-label="+6285....."
-                                                aria-describedby="basic-addon1">
-                                        </div>
-                                        <div class="input-grup mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Provinsi</span>
-                                            <select onchange="kabupaten(this.value)" class="form-control" name="provinsi"
-                                                id="provinsi">
-                                                <option value="">= pilih Provinsi =</option>
-                                                @foreach ($provinsis as $provinsi)
-                                                    <option value="{{ encrypt($provinsi->id) }}">
-                                                        {{ $provinsi->nama }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="input-grup mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Kabupaten</span>
-                                            <select onchange="kecamatan(this.value)" class="form-control" name="kab"
-                                                id="list-kab">
-                                                <option id="default-kab">= Pilih Provinsi Terlebih Dahulu =
-                                                </option>
+    <form
+        action="/checkout?@if (Request::get('keranjang')) keranjang={{ Request::get('keranjang') }}@else{{ 'produk=' . encrypt($produk->id) }} @endif"
+        method="post" class="mt-6">
+        <div class="container mx-auto px-4">
+            <div class="bg-white rounded-lg shadow-md border border-purple-100 max-w-6xl mx-auto">
+                <!-- Header -->
+                <div class="bg-purple-600 p-6 text-white rounded-t-lg">
+                    <h4 class="text-2xl font-bold text-center">Checkout Produk</h4>
+                </div>
 
-                                            </select>
-                                        </div>
-                                        <div class="input-grup mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Kecamatan</span>
-                                            <select onchange="kelurahan(this.value)" class="form-control" name="kec"
-                                                id="list-kec">
-                                                <option id="default-kec">= Pilih Kabupaten Terlebih Dahulu =
-                                                </option>
-
-                                            </select>
-                                        </div>
-                                        <div class="input-grup mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Kelurahan</span>
-                                            <select class="form-control" name="kel" id="list-kel">
-                                                <option id="default-kel">= Pilih Kabupaten Terlebih Dahulu =
-                                                </option>
-
-                                            </select>
-                                        </div>
-                                        <div class="input-grup mb-3">
-                                            <span class="input-group-text" id="basic-addon1">Alamat, RT,
-                                                RW</span>
-                                            <textarea name="dusun" id="" cols="10" class="form-control" rows="5"></textarea>
-                                        </div>
-                                        <div>
-                                            <button type="submit" class="btn btn-primary">Tambah</button>
-                                        </div>
-
-
-
-                                    </form>
-                                    <div id="list-penerima">
-                                        <table class="table">
-
-                                            @foreach ($penerimas as $penerima)
-                                                <tr onclick="select('{{ $penerima->id }}')" class="col-12"
-                                                    id="{{ encrypt($penerima->id) }}">
-                                                    <td>
-                                                        {{ $penerima->nama }}
-                                                        <br>
-                                                        <small>{{ $penerima->alamat . ', ' . $penerima->kelurahan->nama . ', ' . $penerima->kelurahan->kecamatan->nama . ', ' . $penerima->kelurahan->kecamatan->kab_kota->nama . ', ' . $penerima->kelurahan->kecamatan->kab_kota->provinsi->nama }}</small>
-                                                    </td>
-                                                    <td> <input type="radio" x="{{ encrypt($penerima->id) }}"
-                                                            id="{{ $penerima->id }}" for="{{ $penerima->id }}"
-                                                            name="penerima"
-                                                            value="{{ $penerima->alamat . ', ' . $penerima->kelurahan->nama . ', ' . $penerima->kelurahan->kecamatan->nama . ', ' . $penerima->kelurahan->kecamatan->kab_kota->nama . ', ' . $penerima->kelurahan->kecamatan->kab_kota->provinsi->nama }}">
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </table>
-
-                                    </div>
-
-                                    <button id="btn-tambah-baru"
-                                        class="bg-white col-12 p-2 border border-1 border-secondary"
-                                        onclick="tampilForm()">Tambah Baru</button>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" id="kembali" onclick="list()" style="display: none"
-                                        class="btn btn-warning">Kembali</button>
-                                    <button type="button" id="konfirmasi" onclick="konfirmasi()"
-                                        class="btn btn-primary">Konfirmasi</button>
-                                </div>
+                <div class="p-6">
+                    <!-- Alamat Section -->
+                    <div class="bg-purple-50 p-6 rounded-lg border border-purple-200 mb-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                            <div>
+                                <h5 class="text-lg font-semibold text-gray-800">Alamat Pengiriman</h5>
+                                <span id="alamatfix" class="text-purple-700 font-medium">Belum dipilih</span>
                             </div>
+                            <button type="button" id="ubah"
+                                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition">
+                                <i class="fas fa-edit mr-2"></i>Pilih Alamat
+                            </button>
+                        </div>
+
+                        <div id="hidden-penerima"></div>
+                        @error('penerima')
+                            <p class="text-red-500 text-sm mt-2">Pilih Alamat Pengiriman</p>
+                        @enderror
+
+                        <div id="fix-alamat" class="mt-4"></div>
+
+                        <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mt-4">
+                            <p class="text-yellow-700 text-sm">
+                                Pastikan alamat Anda terdaftar di daerah gratis ongkir
+                            </p>
                         </div>
                     </div>
-                    </h5>
-                </div>
-                <div>
-                    {{-- <div id="map" style="width: 100%; height: 400px;"></div> --}}
 
-                </div>
+                    <!-- Produk Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Gambar Produk -->
+                        <div class="space-y-4">
+                            <!-- Gambar Utama -->
+                            <div class="w-full aspect-square bg-purple-100 rounded-lg overflow-hidden">
+                                <img id="mainImage"
+                                    src="{{ env('APP_URL') . '/file?file=' . encrypt($produk->media[0]->file) }}"
+                                    alt="Gambar Utama" class="w-full h-full object-cover">
+                            </div>
 
-                <div class="row justify-content-center">
-                    <div class="col-12 m-2">
-                        <div class="row">
-                            <!-- Gambar Produk -->
-                            <div class="col-12  row d-md-flex bg-light">
-                                <div class="col-12 col-md-12 col-lg-3" style="width: 400px">
-                                    <div class="foto col-12 row flex-row flex-nowrap " id="filePreviewContainer"
-                                        style="overflow-x: scroll">
-                                        @foreach ($produk->media as $media)
-                                            <div class="p-3" style="width: 370px">
-                                                <img class="p-1"
-                                                    src="{{ env('APP_URL') . '/file?file=' . encrypt($media->file) }}"
-                                                    width="400px" height="400px" style="overflow: hidden"
-                                                    alt="">
-                                            </div>
+                            <!-- Thumbnail -->
+                            <div class="flex space-x-2 overflow-x-auto">
+                                @foreach ($produk->media as $media)
+                                    <img class="thumbnail w-16 h-16 object-cover rounded border border-purple-300 cursor-pointer"
+                                        src="{{ env('APP_URL') . '/file?file=' . encrypt($media->file) }}"
+                                        data-src="{{ env('APP_URL') . '/file?file=' . encrypt($media->file) }}"
+                                        alt="Thumbnail">
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Detail Produk -->
+                        <div class="space-y-4">
+                            <!-- Nama & Kategori -->
+                            <div>
+                                <h1 class="text-2xl font-bold text-gray-800">{{ $produk->nama }}</h1>
+                                <p class="text-gray-500 mt-1">
+                                    Kategori: <span class="text-purple-600">{{ $produk->kategory->name }}</span>
+                                </p>
+                            </div>
+
+                            <!-- Harga -->
+                            <div class="text-3xl font-bold text-purple-700">@currency($produk->harga)</div>
+
+                            <!-- Gratis Ongkir -->
+                            <div class="bg-purple-50 p-3 rounded-lg">
+                                <p class="text-purple-700 font-medium">
+                                    Gratis Ongkir ke:
+                                    @foreach ($produk->provinsi as $item)
+                                        {{ $item->nama }}@if (!$loop->last)
+                                            ,
+                                        @endif
+                                    @endforeach
+                                </p>
+                            </div>
+
+                            <!-- Varian -->
+                            @if ($produk->varian->count() > 0)
+                                <div>
+                                    <label class="block font-medium text-gray-700 mb-2">Pilih Varian:</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach ($produk->varian as $varian)
+                                            <label
+                                                class="border border-purple-400 px-4 py-2 rounded bg-purple-50 text-purple-700 cursor-pointer hover:bg-purple-100 transition">
+                                                <input type="checkbox" class="hidden varian-checkbox"
+                                                    value="{{ $varian->id }}" data-harga="{{ $produk->harga }}">
+                                                {{ $varian->nama }}
+                                            </label>
                                         @endforeach
                                     </div>
-                                    <div id="tombol" class="d-flex m-2  justify-content-center">
-                                        <div class="d-flex">
-                                            <button id="scrollLeft" type="button" class="btn btn-light"
-                                                onclick="scrollLeftBtn()">&#10094;</button>
-                                            <button type="button" id="scrollRight" class="btn btn-light"
-                                                onclick="scrollRightBtn()">&#10095;</button>
+                                </div>
+                            @endif
+
+                            @error('input-varian')
+                                <p class="text-red-500 text-sm">{{ $message }}</p>
+                            @enderror
+
+                            <!-- Total & Jumlah -->
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                    <div>
+                                        <p class="text-gray-600">Total Harga</p>
+                                        <div id="hargatotal" class="text-xl font-bold text-purple-700">@currency($produk->harga)
                                         </div>
+                                        <span id="harga_awal" class="hidden">{{ $produk->harga }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" onclick="minus()"
+                                            class="w-8 h-8 rounded-full bg-white border border-purple-400 text-purple-700">−</button>
+                                        <span id="total" class="text-lg font-medium">1</span>
+                                        <button type="button" onclick="add()"
+                                            class="w-8 h-8 rounded-full bg-white border border-purple-400 text-purple-700">+</button>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="mt-6 bg-white border border-purple-200 rounded-2xl p-5 shadow-sm">
+                                <label for="metode"
+                                    class="block font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                    <i class="fas fa-wallet text-purple-600"></i>
+                                    Pilih Metode Pembayaran
+                                </label>
 
-                                <!-- Deskripsi Produk -->
-                                <div class="col-12 col-md-12  col-lg-6  mt-4">
-                                    <div>
-                                        <h2>{{ $produk->nama }}</h2>
-                                        <p class="text-muted">Kategori: {{ $produk->kategory->name }}</p>
-                                        <p>Varian @foreach ($produk->varian as $varian)
-                                                <button id="{{ 'varian-' . $varian->id }}"
-                                                    onclick="selectVarian('{{ 'varian-' . $varian->id }}')"
-                                                    class="badge list-varian bordered text-dark  border-success">
-                                                    {{ $varian->nama }}
-                                                </button>
-                                            @endforeach
-                                        </p>
-                                        @error('varian')
-                                        <p class="text-danger">Pilih Varian</p>
-                                        @enderror
-                                      
-
-                                        <small>
-                                        
-                                        </small>
-                                        <h4 class="text-danger">
-                                            @currency($produk->harga)
-                                            <span id="harga_awal" class="d-none">{{ $produk->harga }}</span>
-
-                                        </h4>
-                                        <small>
-                                            <img width="50px"
-                                                src="https://images.tokopedia.net/img/cache/700/VqbcmM/2022/2/22/682b7c8a-6a43-4c9a-a0ef-92d221af7fb9.jpg"
-                                                alt=""> Gratis Ongkir
-                                        </small>
-                                        <p>Daerah Gratis Ongkir : @foreach ($produk->provinsi as $item)
-                                                {{ $item->nama }}@if (!$loop->last)
-                                                    ,
-                                                @endif
-                                            @endforeach
-                                            </span>
-
-                                        </p>
-
-                                    </div>
-                                    <div class="d-flex">
-                                        <div class="col-6">
-                                            <div class=" h6 bg-success text-white p-2 round rounded-3 ">
-                                                <span> Total Harga</span> <br>
-                                                <span id="hargatotal"> @currency($produk->harga)</span>
-                                                <input type="hidden" name="jumlahBeli" id="jumlahBeli" value="1">
-
-                                            </div>
-
+                                <!-- Custom wrapper -->
+                                <div class="relative">
+                                    <div id="custom-select"
+                                        class="border border-purple-300 rounded-lg p-3 flex justify-between items-center cursor-pointer hover:border-purple-500 transition">
+                                        <div>
+                                            <p id="selected-method" class="font-medium text-gray-800">Pilih Metode
+                                                Pembayaran</p>
+                                            <p id="selected-fee" class="text-sm text-gray-500">–</p>
                                         </div>
-
-                                        <div class="col-3 d-flex justify-content-center">
-                                            <button class="text-success btn btn-light" onclick="minus()">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"
-                                                    fill="currentColor" class="bi bi-dash-circle" viewBox="0 0 16 16">
-                                                    <path
-                                                        d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-                                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8" />
-                                                </svg>
-                                            </button>
-
-                                            <span class="ms-2 me-2 fs-5" id="total">1</span>
-                                            <button class="text-success btn btn-light" onclick="add()">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"
-                                                    fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
-                                                    <path
-                                                        d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-                                                    <path
-                                                        d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
-                                                </svg>
-                                            </button>
-
-                                        </div>
-
-                                    </div>
-                                    <div class="col-12">
-                                        <form action="/checkout?@if(Request::get('keranjang'))keranjang={{Request::get('keranjang')}}@endif" class="mb-3 btn" method="post">
-                                            <input type="text" name="catatan" placeholder="Pesan">
-                                            @csrf
-                                            <input type="hidden" name="produk" value="{{ encrypt($produk->id) }}">
-                                            <input type="hidden" name="jumlahBeli" id="input_jumlah_beli"
-                                                value="1">
-                                            <input type="hidden" id="input_alamat_id" name="penerima" value="">
-                                            <input type="hidden" id="input_varian" name="varian" value="Original">
-                                            <button class="btn btn-danger">Pesan Sekarang</button>
-                                        </form>
+                                        <i class="fas fa-chevron-down text-purple-500"></i>
                                     </div>
 
+                                    <!-- Dropdown content -->
+                                    <div id="custom-options"
+                                        class="absolute z-10 w-full bg-white border border-purple-200 rounded-xl mt-2 shadow-xl hidden max-h-72 overflow-y-auto">
+                                        <div class="text-center text-gray-400 py-3" id="loading-text">Memuat metode
+                                            pembayaran...</div>
+                                    </div>
 
+                                    <!-- Hidden real select (untuk dikirim ke backend) -->
+                                    <select id="metode" name="metode" class="hidden" required></select>
+                                </div>
+
+                                <div id="fee-info" class="mt-5 hidden bg-purple-50 rounded-xl p-4">
+                                    <div class="flex justify-between text-sm text-gray-700">
+                                        <span>Subtotal:</span>
+                                        <span id="subtotal-text" class="font-semibold text-gray-800">Rp0</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm text-gray-700 mt-1">
+                                        <span>Biaya Admin:</span>
+                                        <span id="fee-text" class="font-semibold text-gray-800">Rp0</span>
+                                    </div>
+                                    <div
+                                        class="flex justify-between text-base font-semibold text-purple-700 border-t border-purple-200 mt-2 pt-2">
+                                        <span>Total Bayar:</span>
+                                        <span id="total-bayar-text">Rp0</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <hr>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const hargaAwal = parseFloat(document.getElementById('harga_awal').innerText.replace(/[^0-9]/g, '') || 0);
+    const customSelect = document.getElementById('custom-select');
+    const customOptions = document.getElementById('custom-options');
+    const metodeSelect = document.getElementById('metode');
+    const selectedMethod = document.getElementById('selected-method');
+    const selectedFee = document.getElementById('selected-fee');
+    const feeInfo = document.getElementById('fee-info');
+    const subtotalText = document.getElementById('subtotal-text');
+    const feeText = document.getElementById('fee-text');
+    const totalText = document.getElementById('total-bayar-text');
+    const loadingText = document.getElementById('loading-text');
+
+    subtotalText.textContent = hargaAwal.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+
+    try {
+        const res = await fetch('/api/tripay/channels');
+        const channels = await res.json();
+
+        channels.forEach(c => {
+            c.total_biaya = c.total_fee.flat + (c.total_fee.percent * hargaAwal / 100);
+        });
+
+        channels.sort((a, b) => a.total_biaya - b.total_biaya);
+
+        customOptions.innerHTML = '';
+        metodeSelect.innerHTML = '<option value="">Pilih Metode Pembayaran</option>';
+
+        channels.forEach(ch => {
+            const fee = Math.round(ch.total_biaya);
+            const option = document.createElement('option');
+            option.value = ch.code;
+            option.textContent = ch.name;
+            metodeSelect.appendChild(option);
+
+            const card = document.createElement('div');
+            card.className = "flex items-center gap-3 p-3 border-b border-gray-100 hover:bg-purple-50 cursor-pointer transition";
+            card.innerHTML = `
+                <img src="${ch.icon_url || `https://tripay.co.id/images/bank/${ch.code.toLowerCase()}.png`}"
+                     class="w-10 h-10 object-contain" alt="${ch.name}">
+                <div class="flex-1">
+                    <p class="font-semibold text-gray-800">${ch.name}</p>
+                    <p class="text-xs text-gray-500">${ch.group}</p>
+                    <p class="text-xs text-purple-600 font-medium mt-1">Fee: Rp${fee.toLocaleString('id-ID')}</p>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                // Update select value
+                metodeSelect.value = ch.code;
+
+                // Tampilkan data terpilih
+                selectedMethod.textContent = ch.name;
+                selectedFee.textContent = `Fee: Rp${fee.toLocaleString('id-ID')}`;
+
+                // Hitung total bayar
+                const totalBayar = hargaAwal + fee;
+                feeText.textContent = fee.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+                totalText.textContent = totalBayar.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+                feeInfo.classList.remove('hidden');
+
+                // Tutup dropdown
+                customOptions.classList.add('hidden');
+
+                const totalInput = document.getElementById('total_bayar_input');
+                if (totalInput) totalInput.value = totalBayar;
+            });
+
+            customOptions.appendChild(card);
+        });
+    } catch (err) {
+        console.error('Gagal memuat metode pembayaran Tripay:', err);
+        loadingText.textContent = 'Gagal memuat data. Silakan refresh halaman.';
+    }
+
+    // Toggle dropdown
+    customSelect.addEventListener('click', () => {
+        customOptions.classList.toggle('hidden');
+    });
+
+    // Tutup dropdown jika klik di luar
+    document.addEventListener('click', e => {
+        if (!customSelect.contains(e.target) && !customOptions.contains(e.target)) {
+            customOptions.classList.add('hidden');
+        }
+    });
+});
+</script>
 
 
 
+
+
+                            @csrf
+                            <input type="hidden" name="produk" value="{{ encrypt($produk->id) }}">
+                            <input type="hidden" name="jumlahBeli" id="input_jumlah_beli" value="1">
+                            <input type="hidden" id="input_varian" name="varian" value="Original">
+
+                            <!-- Catatan -->
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-2">Catatan (opsional)</label>
+                                <textarea name="catatan" rows="3" placeholder="Tulis catatan untuk penjual"
+                                    class="w-full px-3 py-2 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"></textarea>
+                            </div>
+
+                            <!-- Tombol -->
+                            <button type="submit"
+                                class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold transition">
+                                🛒 Pesan Sekarang
+                            </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
 
-
-
-
-
+    <!-- Modal -->
+    <div class="fixed inset-0 z-50 hidden" id="modalOverlay">
+        <div class="fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <!-- Modal Header -->
+                <div class="bg-purple-600 p-4 text-white rounded-t-lg">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold">Pilih Alamat Pengiriman</h3>
+                        <button type="button" id="close-modal" class="text-white text-xl">
+                            &times;
+                        </button>
                     </div>
                 </div>
 
+                <!-- Modal Body -->
+                <div class="p-6">
+                    <!-- Tabs -->
+                    <div class="flex border-b border-purple-200 mb-4">
+                        <button id="tab-pilih"
+                            class="px-4 py-2 font-semibold text-purple-600 border-b-2 border-purple-600">
+                            Pilih Alamat
+                        </button>
+                        <button id="tab-baru" class="px-4 py-2 font-semibold text-gray-500">
+                            Alamat Baru
+                        </button>
+                    </div>
 
+                    <!-- Tab Pilih Alamat -->
+                    <div id="pilih-alamat" class="space-y-4">
+                        <div>
+                            <label for="alamat-terdaftar" class="block text-sm font-medium text-gray-700 mb-2">
+                                Alamat Tersimpan
+                            </label>
+                            <select id="alamat-terdaftar" name="penerima"
+                                class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">Pilih salah satu alamat</option>
+                                @foreach (Auth::user()->penerima as $p)
+                                    <option value="{{ encrypt($p->id) }}" data-penerima="{{ $p->penerima }}"
+                                        data-contact="{{ $p->contact }}" data-alamat="{{ $p->alamat }}">
+                                        {{ $p->penerima }} | {{ $p->contact }} | {{ \Str::limit($p->alamat, 50) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Detail Alamat -->
+                        <div id="detail-alamat" class="hidden bg-purple-50 p-4 rounded border border-purple-200">
+                            <h4 class="font-semibold text-gray-800 mb-2">Alamat Terpilih</h4>
+                            <div class="text-gray-700 space-y-1">
+                                <p><strong>Nama:</strong> <span id="detail-nama"></span></p>
+                                <p><strong>Kontak:</strong> <span id="detail-contact"></span></p>
+                                <p><strong>Alamat:</strong> <span id="detail-fullalamat"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button id="gunakan" disabled
+                                class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                Gunakan Alamat Ini
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Alamat Baru -->
+                    <div id="form-alamat-baru" class="hidden space-y-4">
+                        <form id="alamatForm" action="/tambah-penerima" method="post" class="space-y-4">
+                            <script>
+                                document.addEventListener("DOMContentLoaded", async () => {
+                                    const provinsiSelect = document.getElementById("provinsi");
+                                    const kabupatenSelect = document.getElementById("kabupaten");
+                                    const kecamatanSelect = document.getElementById("kecamatan");
+                                    const kelurahanSelect = document.getElementById("kelurahan");
+                                    const rtRwInput = document.getElementById("rt_rw");
+                                    const jalanInput = document.getElementById("jalan");
+
+                                    // 🔹 Load data provinsi saat halaman dimuat
+                                    async function loadProvinces() {
+                                        const res = await fetch("https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json");
+                                        const provinces = await res.json();
+
+                                        provinces.forEach(prov => {
+                                            const opt = document.createElement("option");
+                                            opt.value = prov.id;
+                                            opt.textContent = prov.name;
+                                            provinsiSelect.appendChild(opt);
+                                        });
+                                    }
+
+                                    // 🔹 Load kabupaten sesuai provinsi
+                                    async function loadRegencies(provinceId) {
+                                        kabupatenSelect.innerHTML = '<option value="">Pilih Kabupaten</option>';
+                                        kecamatanSelect.innerHTML = '<option value="">Pilih Kecamatan</option>';
+                                        kelurahanSelect.innerHTML = '<option value="">Pilih Kelurahan</option>';
+
+                                        if (!provinceId) return;
+
+                                        const res = await fetch(
+                                            `https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${provinceId}.json`);
+                                        const regencies = await res.json();
+
+                                        regencies.forEach(kab => {
+                                            const opt = document.createElement("option");
+                                            opt.value = kab.id;
+                                            opt.textContent = kab.name;
+                                            kabupatenSelect.appendChild(opt);
+                                        });
+
+                                        kabupatenSelect.disabled = false;
+                                    }
+
+                                    // 🔹 Load kecamatan
+                                    async function loadDistricts(regencyId) {
+                                        kecamatanSelect.innerHTML = '<option value="">Pilih Kecamatan</option>';
+                                        kelurahanSelect.innerHTML = '<option value="">Pilih Kelurahan</option>';
+
+                                        if (!regencyId) return;
+
+                                        const res = await fetch(
+                                            `https://www.emsifa.com/api-wilayah-indonesia/api/districts/${regencyId}.json`);
+                                        const districts = await res.json();
+
+                                        districts.forEach(kec => {
+                                            const opt = document.createElement("option");
+                                            opt.value = kec.id;
+                                            opt.textContent = kec.name;
+                                            kecamatanSelect.appendChild(opt);
+                                        });
+
+                                        kecamatanSelect.disabled = false;
+                                    }
+
+                                    // 🔹 Load kelurahan
+                                    async function loadVillages(districtId) {
+                                        kelurahanSelect.innerHTML = '<option value="">Pilih Kelurahan</option>';
+                                        if (!districtId) return;
+
+                                        const res = await fetch(
+                                            `https://www.emsifa.com/api-wilayah-indonesia/api/villages/${districtId}.json`);
+                                        const villages = await res.json();
+
+                                        villages.forEach(kel => {
+                                            const opt = document.createElement("option");
+                                            opt.value = kel.id;
+                                            opt.textContent = kel.name;
+                                            kelurahanSelect.appendChild(opt);
+                                        });
+
+                                        kelurahanSelect.disabled = false;
+                                        rtRwInput.disabled = false;
+                                        jalanInput.disabled = false;
+                                    }
+
+                                    // 🔹 Event listener antar dropdown
+                                    provinsiSelect.addEventListener("change", e => {
+                                        kabupatenSelect.disabled = true;
+                                        kecamatanSelect.disabled = true;
+                                        kelurahanSelect.disabled = true;
+                                        rtRwInput.disabled = true;
+                                        jalanInput.disabled = true;
+                                        loadRegencies(e.target.value);
+                                    });
+
+                                    kabupatenSelect.addEventListener("change", e => {
+                                        kecamatanSelect.disabled = true;
+                                        kelurahanSelect.disabled = true;
+                                        rtRwInput.disabled = true;
+                                        jalanInput.disabled = true;
+                                        loadDistricts(e.target.value);
+                                    });
+
+                                    kecamatanSelect.addEventListener("change", e => {
+                                        kelurahanSelect.disabled = true;
+                                        rtRwInput.disabled = true;
+                                        jalanInput.disabled = true;
+                                        loadVillages(e.target.value);
+                                    });
+
+                                    // 🔹 Jalankan pertama kali
+                                    loadProvinces();
+                                });
+                            </script>
+
+                            @csrf
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="penerima" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Nama Penerima
+                                    </label>
+                                    <input type="text" id="penerima" name="penerima" placeholder="Nama lengkap"
+                                        class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        required />
+                                </div>
+                                <div>
+                                    <label for="contact" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Nomor Telepon
+                                    </label>
+                                    <input type="text" id="contact" name="contact" placeholder="081234567890"
+                                        class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        required />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="provinsi" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Provinsi
+                                </label>
+                                <select id="provinsi" name="provinsi"
+                                    class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    required>
+                                    <option value="">Pilih Provinsi</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="kabupaten" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Kabupaten/Kota
+                                    </label>
+                                    <select id="kabupaten" name="kabupaten"
+                                        class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        required disabled>
+                                        <option value="">Pilih Kabupaten</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="kecamatan" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Kecamatan
+                                    </label>
+                                    <select id="kecamatan" name="kecamatan"
+                                        class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        required disabled>
+                                        <option value="">Pilih Kecamatan</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="kelurahan" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Kelurahan/Desa
+                                    </label>
+                                    <select id="kelurahan" name="kelurahan"
+                                        class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        required disabled>
+                                        <option value="">Pilih Kelurahan</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="rt_rw" class="block text-sm font-medium text-gray-700 mb-1">
+                                        RT/RW
+                                    </label>
+                                    <input type="text" id="rt_rw" name="rt_rw" placeholder="01/05" disabled
+                                        class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        required />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="jalan" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Jalan & Nomor Rumah
+                                </label>
+                                <input type="text" id="jalan" name="jalan" placeholder="Jl. Melati No. 10"
+                                    disabled
+                                    class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    required />
+                            </div>
+
+                            <div class="pt-4">
+                                <button type="submit"
+                                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded transition">
+                                    Simpan Alamat
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
-
-
         </div>
     </div>
 
+    @if ($errors->any())
+        <div x-data="{ open: true }" x-show="open"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-red-600">Terjadi Kesalahan</h3>
+                    <button @click="open = false" class="text-gray-500 hover:text-gray-800">&times;</button>
+                </div>
+                <ul class="list-disc list-inside text-sm text-red-600 space-y-1">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <div class="mt-4 text-right">
+                    <button @click="open = false"
+                        class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <script>
-        function pilih(param) {
-
-            let penerima = document.getElementById('asal_penerima' + param).innerText
-
-            let contact = document.getElementById('asal_contact' + param).innerText
-            let alamat = document.getElementById('asal_alamat' + param).innerText
-            let close = document.getElementById('btn-close')
-
-            close.click()
-
-
-            let penerima_masuk = document.getElementById('penerima').innerText = penerima
-            let contact_masuk = document.getElementById('contact').innerText = contact
-            let alamat_masuk = document.getElementById('alamat').innerText = alamat
-
-
-            document.getElementById('penerimaVal').value = param
-
-
-        }
-
-        function minus() {
-            let total = parseInt(document.getElementById('total').innerText)
-            let harga_awal = parseInt(document.getElementById('harga_awal').innerText)
-            let hargatotal = document.getElementById('hargatotal')
-
-            if (total - 1 >= 1) {
-                let jumlah = document.getElementById('total').innerText = total - 1
-
-                let final = harga_awal * jumlah
-
-                document.getElementById('input_jumlah_beli').value = jumlah
-
-                hargatotal.innerText = formatRupiah(final)
-                document.getElementById('jumlahBeli').value = total - 1
-            }
-        }
-
-        function add() {
-            let harga_awal = parseInt(document.getElementById('harga_awal').innerText)
-            console.log(harga_awal)
-            let hargatotal = document.getElementById('hargatotal')
-
-            let total = parseInt(document.getElementById('total').innerText)
-            let jumlah = document.getElementById('total').innerText = total + 1
-
-            let final = harga_awal * jumlah
-            hargatotal.innerText = formatRupiah(final)
-            document.getElementById('jumlahBeli').value = total + 1
-
-            document.getElementById('input_jumlah_beli').value = jumlah
-
-        }
-
-        function formatRupiah(angka) {
-            const format = new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR'
-            });
-            return format.format(angka);
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
-    </script>
-
-    <!-- jQuery AJAX -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('#tambah-penerima').on('submit', function(e) {
-                e.preventDefault(); // Mencegah refresh halaman
-
-                // Mengambil semua data dari form
-                var formData = $(this).serialize();
-
-                // Mengirim data dengan AJAX
-                $.ajax({
-                    url: '/penerima', 
-                    type: 'POST',
-                    data: formData,
-                    success: function(response, textStatus, xhr) {
-                        // Tindakan setelah data berhasil dikirim
-                        if (xhr.status == 200) {
-                            document.getElementById('list-penerima').style.display = "block";
-                            document.getElementById('btn-tambah-baru').style.display = "block";
-                            document.getElementById('tambah-penerima').style.display = "none";
-
-                            $('#list-penerima').load('/load-penerima');
-
-                            document.getElementById("tambah-penerima").reset();
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        // Tindakan jika terjadi kesalahan
-                        console.error("Terjadi kesalahan:", error);
-                        alert("Gagal mengirim form.");
-
-                    }
-                });
+        // Thumbnail functionality
+        document.querySelectorAll('.thumbnail').forEach(thumb => {
+            thumb.addEventListener('click', function() {
+                const mainImage = document.getElementById('mainImage');
+                if (mainImage) {
+                    mainImage.src = this.dataset.src;
+                }
             });
         });
 
-        function select(id) {
-            console.log(id)
-            document.querySelector(`input[type="radio"][id="${id}"]`).checked = true;;
+        // Modal functionality
+        const ubahBtn = document.getElementById('ubah');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const closeModal = document.getElementById('close-modal');
 
+        ubahBtn.addEventListener('click', () => {
+            modalOverlay.classList.remove('hidden');
+        });
+
+        closeModal.addEventListener('click', () => {
+            modalOverlay.classList.add('hidden');
+        });
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.add('hidden');
+            }
+        });
+
+        // Tab functionality
+        const tabPilih = document.getElementById('tab-pilih');
+        const tabBaru = document.getElementById('tab-baru');
+        const pilihAlamat = document.getElementById('pilih-alamat');
+        const formAlamatBaru = document.getElementById('form-alamat-baru');
+
+        tabPilih.addEventListener('click', () => {
+            tabPilih.classList.add('text-purple-600', 'border-purple-600');
+            tabBaru.classList.remove('text-purple-600', 'border-purple-600');
+            tabBaru.classList.add('text-gray-500');
+            pilihAlamat.classList.remove('hidden');
+            formAlamatBaru.classList.add('hidden');
+        });
+
+        tabBaru.addEventListener('click', () => {
+            tabBaru.classList.add('text-purple-600', 'border-purple-600');
+            tabPilih.classList.remove('text-purple-600', 'border-purple-600');
+            tabPilih.classList.add('text-gray-500');
+            formAlamatBaru.classList.remove('hidden');
+            pilihAlamat.classList.add('hidden');
+        });
+
+        // Alamat selection functionality
+        document.getElementById('gunakan').addEventListener('click', () => {
+            modalOverlay.classList.add('hidden');
+
+            const detailAlamat = document.getElementById('detail-alamat');
+            const fixAlamat = document.getElementById('fix-alamat');
+
+            fixAlamat.innerHTML = detailAlamat.innerHTML;
+            detailAlamat.classList.add('hidden');
+
+            const selectAlamat = document.getElementById('alamat-terdaftar');
+            const selectedValue = selectAlamat.value;
+
+            const container = document.getElementById('hidden-penerima');
+            container.innerHTML = '';
+
+            if (selectedValue) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'penerimaPesanan';
+                hiddenInput.value = selectedValue;
+                container.appendChild(hiddenInput);
+            }
+        });
+
+        document.getElementById('alamat-terdaftar').addEventListener('change', function() {
+            const selected = this.options[this.selectedIndex];
+            const nama = selected.getAttribute('data-penerima');
+            const contact = selected.getAttribute('data-contact');
+            const alamat = selected.getAttribute('data-alamat');
+
+            if (nama && contact && alamat) {
+                document.getElementById('detail-nama').textContent = nama;
+                document.getElementById('detail-contact').textContent = contact;
+                document.getElementById('detail-fullalamat').textContent = alamat;
+                document.getElementById('detail-alamat').classList.remove('hidden');
+                document.getElementById('gunakan').disabled = false;
+            } else {
+                document.getElementById('detail-alamat').classList.add('hidden');
+                document.getElementById('gunakan').disabled = true;
+            }
+        });
+
+        // Quantity functionality
+        let jumlah = 1;
+        const hargaSatuan = parseInt(document.getElementById('harga_awal').innerText);
+        const jumlahSpan = document.getElementById('total');
+        const totalHargaEl = document.getElementById('hargatotal');
+        const jumlahInput = document.getElementById('input_jumlah_beli');
+
+        function updateHarga() {
+            jumlahSpan.innerText = jumlah;
+            jumlahInput.value = jumlah;
+            const total = hargaSatuan * jumlah;
+            totalHargaEl.innerText = new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR'
+            }).format(total);
         }
+
+        function add() {
+            jumlah++;
+            updateHarga();
+        }
+
+        function minus() {
+            if (jumlah > 1) {
+                jumlah--;
+                updateHarga();
+            }
+        }
+
+        updateHarga();
+
+        @if (session('berhasil'))
+            document.addEventListener("DOMContentLoaded", function() {
+                const ubahBtn = document.getElementById('ubah');
+                if (ubahBtn) {
+                    ubahBtn.click();
+                }
+            });
+        @endif
     </script>
+
+
 @endsection
