@@ -14,6 +14,8 @@ use App\Models\varian;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Crypt;
 
 class ProdukController extends Controller
 {
@@ -23,7 +25,7 @@ class ProdukController extends Controller
     public function index()
     {
         return view('produk.index', [
-            'produks' => produk::orderBy('created_at','desc')->paginate(50),
+            'produks' => produk::with('media', 'kategory')->orderBy('created_at', 'desc')->paginate(50),
             'kategory' => kategory::all(),
         ]);
     }
@@ -36,7 +38,6 @@ class ProdukController extends Controller
         return view('produk.create', [
             'kategoryes' => kategory::orderBy('name', 'ASC')->get(),
             'provinsis' => provinsi::orderBy('nama', 'ASC')->get(),
-
         ]);
     }
 
@@ -45,42 +46,58 @@ class ProdukController extends Controller
      */
     public function store(Request $request)
     {
-
         $request->validate([
             'nama' => 'required',
             'keterangan' => 'required',
             'category_id' => 'required',
-            'keterangan' => 'required',
-            'harga' => 'required',
-            'media' => 'required',
-            'link' => 'required',
-            'harga' => 'required',
+            'hargajual' => 'required',
+            'media' => 'required|array|min:1',
+            'hargaAsli.*' => 'required|numeric',
+            'link' => 'required|array|min:1',
+            'hargaAsli' => 'required|array|min:1',
+            'link.*' => 'required|url',
         ]);
 
         $produk = produk::create([
             'kategory_id' => $request->category_id,
             'nama' => $request->nama,
             'keterangan' => $request->keterangan,
-            'harga' => $request->harga,
+            'harga' => $request->hargajual,
         ]);
+        // Enkripsi ID
+        $encryptedId = Crypt::encryptString($produk->id);
+        // Karena encryptedId ada karakter khusus, harus diubah supaya ramah URL, misal base64 encode + ganti karakter
+        $base64Id = strtr(base64_encode($encryptedId), '+/=', '-_,');
+        // Buat slug dari nama + enkripsi id yang sudah diubah
+        $slug = Str::slug($request->nama) . '-' . $base64Id;
+        // Update slug
+        $produk->slug = $slug;
+        $produk->save();
 
         //masukan supplier
-        if ($request->link) {
-            for ($x = 0; $x < count($request->link); $x++) {
-                supplier::create([
-                    'produk_id' => $produk->id,
-                    'supplier' => $request->link[$x],
-                    'harga' => $request->hargaAsli[$x],
-                ]);
+        if ($request->link && $request->hargaAsli) {
+            $countLinks = count($request->link);
+            $countHarga = count($request->hargaAsli);
+            $count = min($countLinks, $countHarga); // pastikan tidak out of range
+
+            for ($i = 0; $i < $count; $i++) {
+                // Cek apakah link dan harga tidak kosong/null
+                if (!empty($request->link[$i]) && !empty($request->hargaAsli[$i])) {
+                    supplier::create([
+                        'produk_id' => $produk->id,
+                        'supplier' => $request->link[$i],
+                        'harga' => $request->hargaAsli[$i],
+                    ]);
+                }
             }
         }
 
         // masukan daerah gratis ongkir
-        if ($request->link) {
-            for ($x = 0; $x < count($request->link); $x++) {
+        if ($request->provinsi) {
+            foreach ($request->provinsi as $p) {
                 free_ongkir::create([
                     'produk_id' => $produk->id,
-                    'daerah_id' => $request->provinsi[$x],
+                    'daerah_id' => $p,
                 ]);
             }
         }
@@ -92,16 +109,22 @@ class ProdukController extends Controller
                     'produk_id' => intval($produk->id),
                     'file' => $media->store('media_produk', 'public'),
                 ]);
-
             }
         }
 
         //simpan Varian
-        if ($request->datavarian) {
-            for ($x = 0; $x < count($request->datavarian); $x++) {
+        if ($request->input_varian) {
+            if (count($request->input('input_varian', [])) > 0) {
+                foreach ($request->input('input_varian') as $varianNama) {
+                    Varian::create([
+                        'produk_id' => $produk->id,
+                        'nama' => $varianNama,
+                    ]);
+                }
+            } else {
                 varian::create([
                     'produk_id' => $produk->id,
-                    'nama' => $request->datavarian[$x],
+                    'nama' => 'Original',
                 ]);
             }
         }
@@ -112,9 +135,10 @@ class ProdukController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($produk)
+    public function show($slug)
     {
-        $id = decrypt($produk);
+        // dd($slug);
+        $id = $this->getIdFromSlug($slug);
 
         return view('produk.show', [
             'produk' => produk::find($id),
@@ -140,8 +164,6 @@ class ProdukController extends Controller
      */
     public function update(Request $request, $produk)
     {
-       
-
         $idProduk = decrypt($produk);
         $request->validate([
             'nama' => 'required',
@@ -150,8 +172,6 @@ class ProdukController extends Controller
             'keterangan' => 'required',
             'harga' => 'required',
         ]);
-
- 
 
         // dd($request->hargaAsli, produk::find($idProduk)->supplier->pluck('harga')->toArray());
 
@@ -170,11 +190,9 @@ class ProdukController extends Controller
         $hargaLama = produk::find($idProduk)->supplier->pluck('harga')->toArray();
         $hargaBaru = $request->hargaAsli;
         if ($supplierBaru) {
-
             if (array_diff($supplierLama, $supplierBaru) || array_diff($hargaLama, $hargaBaru)) {
                 supplier::where('produk_id', $idProduk)->delete();
                 for ($x = 0; $x < count($request->link); $x++) {
-
                     if ($request->link[$x] != null) {
                         supplier::create([
                             'produk_id' => $idProduk,
@@ -182,11 +200,9 @@ class ProdukController extends Controller
                             'harga' => $request->hargaAsli[$x],
                         ]);
                     }
-
                 }
             } elseif (count($supplierLama) == 0) {
                 for ($x = 0; $x < count($request->link); $x++) {
-
                     if ($request->link[$x] != null) {
                         supplier::create([
                             'produk_id' => $idProduk,
@@ -194,7 +210,6 @@ class ProdukController extends Controller
                             'harga' => $request->hargaAsli[$x],
                         ]);
                     }
-
                 }
             }
         }
@@ -203,20 +218,22 @@ class ProdukController extends Controller
 
         $daerahLama = produk::find($idProduk)->provinsi->pluck('id')->toArray();
         $daerahBaru = $request->provinsi;
-        if (array_diff($daerahLama, $daerahBaru)) {
-            free_ongkir::where('produk_id', $idProduk)->delete();
-            for ($x = 0; $x < count($request->provinsi); $x++) {
-                free_ongkir::create([
-                    'produk_id' => $idProduk,
-                    'daerah_id' => $request->provinsi[$x],
-                ]);
-            }
-        } else if (count($daerahLama) == 0) {
-            for ($x = 0; $x < count($request->provinsi); $x++) {
-                free_ongkir::create([
-                    'produk_id' => $idProduk,
-                    'daerah_id' => $request->provinsi[$x],
-                ]);
+        if ($daerahBaru) {
+            if (array_diff($daerahLama, $daerahBaru)) {
+                free_ongkir::where('produk_id', $idProduk)->delete();
+                for ($x = 0; $x < count($request->provinsi); $x++) {
+                    free_ongkir::create([
+                        'produk_id' => $idProduk,
+                        'daerah_id' => $request->provinsi[$x],
+                    ]);
+                }
+            } elseif (count($daerahLama) == 0) {
+                for ($x = 0; $x < count($request->provinsi); $x++) {
+                    free_ongkir::create([
+                        'produk_id' => $idProduk,
+                        'daerah_id' => $request->provinsi[$x],
+                    ]);
+                }
             }
         }
 
@@ -227,25 +244,23 @@ class ProdukController extends Controller
                     'produk_id' => intval($idProduk),
                     'file' => $media->store('media_produk', 'public'),
                 ]);
-
             }
         }
 
-        //tambah varian di update 
-       if($request->datavarian){
-         //simpan Varian
-         if ($request->datavarian) {
-            for ($x = 0; $x < count($request->datavarian); $x++) {
-                varian::create([
-                    'produk_id' =>$idProduk,
-                    'nama' => $request->datavarian[$x],
-                ]);
+        //tambah varian di update
+        if ($request->datavarian) {
+            //simpan Varian
+            if ($request->datavarian) {
+                for ($x = 0; $x < count($request->datavarian); $x++) {
+                    varian::create([
+                        'produk_id' => $idProduk,
+                        'nama' => $request->datavarian[$x],
+                    ]);
+                }
             }
         }
-       }
 
         return back()->with('berhasil', 'Berhasil Update Produk');
-
     }
 
     /**
@@ -254,6 +269,7 @@ class ProdukController extends Controller
     public function destroy($produk)
     {
         $id = decrypt($produk);
+        dd($produk);
         $produk = produk::find($id);
 
         // hapus foto terkait
@@ -271,7 +287,6 @@ class ProdukController extends Controller
         } else {
             return redirect('/produk')->with('gagal', 'Produk Dan Foto gagal Dihapus');
         }
-
     }
 
     public function hapusFotoProduk(Request $request)
@@ -280,7 +295,7 @@ class ProdukController extends Controller
         // Nama file yang akan dihapus
         $filePath = storage_path('app/public/' . media_produk::find($id)->file);
 
-// Cek apakah file ada
+        // Cek apakah file ada
         if (File::exists($filePath)) {
             // Hapus file
             File::delete($filePath);
@@ -292,72 +307,82 @@ class ProdukController extends Controller
         }
     }
 
-    public function lihatProduk(Request $request,$slug)
+    public function lihatProduk(Request $request, $slug)
     {
-        // dd(str_replace('-', ' ', $slug));
+        $produk_id = $this->getIdFromSlug($slug);
 
-        $data = decrypt($request->data);
-        $encrypted_id = $data['id'];
-        $produk_id = decrypt($encrypted_id);
-     
+        // Ambil produk beserta review dan media (jika ada)
+        $produk = produk::with(['review', 'media'])->findOrFail($produk_id);
 
-
+        // Simpan histori lihat jika user login
         if (Auth::check()) {
-            $cekLihatBelum = produk_user::where('user_id', Auth::User()->id)->where('produk_id', $produk_id)->first();
-
-            if ($cekLihatBelum) {
-                $angka = $cekLihatBelum->times + 1;
-
-                $cekLihatBelum->update([
-                    'times' => $angka,
-                ]);
-
-            } else {
-                produk_user::create([
-                    'user_id' => Auth::User()->id,
-                    'produk_id' => $produk_id,
-                    'times' => "1",
-
-                ]);
-            }
-
+            $log = produk_user::firstOrNew([
+                'user_id' => Auth::id(),
+                'produk_id' => $produk_id,
+            ]);
+            $log->times = $log->exists ? $log->times + 1 : 1;
+            $log->save();
         }
+
+        // Produk serupa dari kategori yang sama, tidak termasuk produk ini
+        $produkSerupa = produk::with('media')->where('kategory_id', $produk->kategory_id)->where('id', '!=', $produk->id)->inRandomOrder()->take(10)->get();
+
         return view('produk.lihatProduk', [
-            'produk' => produk::find($produk_id),
-            'reviews'=>produk::find($produk_id)->review()->paginate(10),
-            'produkSerupa'=>produk::where('kategory_id',produk::find($produk_id)->kategory_id)->where('id','!=',$produk_id)->paginate(10),
+            'produk' => $produk,
+            'reviews' => $produk->review()->paginate(10),
+            'produkSerupa' => $produkSerupa,
             'kategorys' => kategory::all(),
         ]);
     }
 
-    function hapusVarian($id) {
+    function hapusVarian($id)
+    {
         $id_varian = decrypt($id);
 
         varian::find($id_varian)->delete();
         return back();
     }
 
-    function review(Request $request) {
-        return view('produk.review',[
+    function review(Request $request)
+    {
+        return view('produk.review', [
             'kategorys' => kategory::all(),
-            'pesanans'=>pesanan::where('id', (decrypt($request->keranjang)))->get()
-            
+            'pesanans' => pesanan::where('id', decrypt($request->keranjang))->get(),
         ]);
     }
 
-    function updateTerjual(Request $request, $id) {
-
+    function updateTerjual(Request $request, $id)
+    {
         $produk = produk::find(decrypt($id));
 
-        if($request->terjual){
-
+        if ($request->terjual) {
             $produk->update([
-                'terjual'=>$request->terjual
+                'terjual' => $request->terjual,
             ]);
 
             return back()->with('berhasil', 'Berhasil Update Data');
         }
 
-       return back()->with('gagal', 'Nominal Terjual tidak Boleh Kosong');
+        return back()->with('gagal', 'Nominal Terjual tidak Boleh Kosong');
+    }
+
+    function getIdFromSlug($slug)
+    {
+        // Pecah slug berdasarkan tanda '-'
+        $parts = explode('-', $slug);
+
+        // Ambil bagian terakhir (encoded id)
+        $encodedId = end($parts);
+
+        // Reverse karakter agar bisa base64_decode
+        $base64 = strtr($encodedId, '-_,', '+/=');
+
+        // Decode base64
+        $encryptedId = base64_decode($base64);
+
+        // Decrypt string untuk dapat id asli
+        $id = Crypt::decryptString($encryptedId);
+
+        return $id;
     }
 }

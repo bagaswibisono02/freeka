@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('free_ongkirs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('produk_id')->constrained('produks');
-            $table->foreignId('daerah_id')->constrained('provinsis');
+            $table->foreignId('produk_id');
+            $table->foreignId('daerah_id');
             $table->timestamps();
         });
     }

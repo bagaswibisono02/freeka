@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Str;
 use App\Models\kategory;
-use App\Models\keuangan;
+use App\Models\Referral;
 use App\Models\pencarian;
+use App\Models\ReferralReward;
+use App\Models\notifikasi;
 use App\Models\pesanan;
-use App\Models\platformAfiliate;
-use App\Models\produk;
+use App\Models\Product;
+use App\Models\Categorie;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
+
 
 class mainController extends Controller
 {
@@ -37,7 +40,6 @@ class mainController extends Controller
             } else {
                 return redirect()->intended('dashboard');
             }
-
         }
 
         return back()->with('gagal', 'Periksa Kombinasi email dan password anda');
@@ -46,12 +48,12 @@ class mainController extends Controller
     public function dashboard()
     {
         return view('dashboard', [
-            'kategoryes' => kategory::orderBy('dicari', 'DESC')->get(),
-            'users'=>User::all(),
-            'produks'=>produk::all(),
-            'pemesanans'=>pesanan::all(),
-            'pencarians' => pencarian::orderBy('created_at', 'ASC')->get(),
-            'transaksis' => keuangan::orderBy('created_at', 'ASC')->limit(50)->get(),
+            'kategoryes' => Categorie::get(),
+            'users' => User::all(),
+            'produks' => Product::all(),
+            'pemesanans' => Product::all(),
+            'pencarians' => Product::orderBy('created_at', 'ASC')->get(),
+            'transaksis' => Product::orderBy('created_at', 'ASC')->limit(50)->get(),
         ]);
     }
     public function logout(Request $request)
@@ -78,41 +80,21 @@ class mainController extends Controller
         $file = File::get($path);
         $type = File::mimeType($path);
 
-        return response($file, 200)->header("Content-Type", $type);
+        return response($file, 200)
+            ->header('Content-Type', $type)
+            ->header('Cache-Control', 'public, max-age=31536000, immutable')
+            ->header('Expires', gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT');
     }
 
     public function index()
     {
-        $trending = Produk::withCount(['users as total_time' => function ($query) {
-            $query->select(DB::raw("SUM(times)"))
-            ;
-        }])
-            ->having('total_time', '>', 0)
-            ->orderBy('total_time', 'desc')
-            ->get();
-
-        if (Auth::check()) {
-            $foryou = Produk::withCount(['users as total_time' => function ($query) {
-                $query->where('user_id', Auth::id())
-                    ->select(DB::raw("SUM(times)"))
-                ;
-            }])
-                ->having('total_time', '>', 0)
-                ->orderBy('total_time', 'desc')
-                ->get();
-            $idForyou = $foryou->pluck('id')->toArray();
-        }
-        else{
-   
-            $foryou= Produk::orderBy('created_at', 'DESC')->paginate(12);
-            $idForyou = $foryou->pluck('id')->toArray();
-        }
+        // $kategories = kategory::select('id', 'name')->get(); //
+        $produks = produk::select('nama', 'harga', 'slug', 'id')
+            ->with(['media:id,produk_id,file', 'kategory:id,nama'])
+            ->paginate(50);
         return view('produk.lihatUser', [
-            'trendings' => $trending,
-            'foryous' => $foryou,
-            'terbaru'=>produk::whereNotIn('id', $idForyou)->orderBy('created_at','desc')->paginate(50),
-            'afiliasi'=>platformAfiliate::all(),
-            'kategorys' => kategory::all(),
+            'produks' => $produks,
+            'kategories' => $kategories,
         ]);
     }
 
@@ -126,14 +108,30 @@ class mainController extends Controller
     }
     public function prosesRegisterUser(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-            'contact' => ['required'],
-        ]);
+        $credentials = $request->validate(
+            [
+                'email' => ['required', 'email', 'unique:users,email'],
+                'contact' => ['required', 'regex:/^[0-9]{10,15}$/'],
+                'password' => ['required', 'min:6'],
+                'password2' => ['required', 'same:password'],
+                'captcha' => ['required', 'captcha'],
+                'referral_code' => ['nullable', 'string', 'exists:users,referral_code'],
+            ],
+            [
+                'captcha.captcha' => 'Kode captcha yang Anda masukkan salah.',
+                'captcha.required' => 'Captcha harus diisi.',
+            ],
+        );
 
         if ($request->password != $request->password2) {
             return back()->with('gagal', 'Password Tidak Sama')->withInput();
+        }
+
+        //cek user yang ksaih rekomendasi
+        // cari siapa yang punya kode referral (kalau ada)
+        $referrer = null;
+        if (!empty($credentials['referral_code'])) {
+            $referrer = User::where('referral_code', !empty($credentials['referral_code']))->first();
         }
 
         $cek = User::create([
@@ -142,7 +140,17 @@ class mainController extends Controller
             'password' => bcrypt($request->password),
             'contact' => $request->contact,
             'hak_akses' => 'User',
+            'referral_code' => $this->generateReferralCode(),
         ]);
+
+        // kalau referral code valid → buat record di tabel referrals
+        if ($referrer) {
+            Referral::create([
+                'referrer_id' => $referrer->id,
+                'referred_user_id' => $cek->id,
+                'status' => 'pending',
+            ]);
+        }
         if ($cek) {
             return redirect('/login')->with('berhasil', 'Berhasil Registrasi Silahkan Login');
         } else {
@@ -150,10 +158,21 @@ class mainController extends Controller
         }
     }
 
+    private function generateReferralCode()
+    {
+        do {
+            $code = strtoupper(Str::random(8));
+        } while (User::where('referral_code', $code)->exists());
+
+        return $code;
+    }
+
     public function panel(Request $request)
     {
-
-        $produk = pesanan::Filter($request->filter)->orderby('created_at','desc')->where('user_id', Auth::user()->id)->paginate(10);
+        $produk = pesanan::Filter($request->filter)
+            ->orderby('created_at', 'desc')
+            ->where('user_id', Auth::user()->id)
+            ->paginate(10);
         return view('user.panel', [
             'pesanans' => $produk,
             'kategorys' => kategory::all(),
@@ -162,116 +181,110 @@ class mainController extends Controller
 
     public function masukanKeranjang(Request $request)
     {
-        $id = decrypt(($request->produk));
-        $cek = pesanan::where('user_id', Auth::user()->id)
-            ->where('produk_id', $id)
-            ->where('status', 'keranjang')
-            ->get();
-        if ($cek->count() > 0) {
-            return 'ada';
-        } else {
-
-            $masukan = pesanan::create([
-                'user_id' => Auth::user()->id,
-                'produk_id' => $id,
-                'status' => 'keranjang',
+        try {
+            $request->validate([
+                'produk' => 'required',
             ]);
 
-            if ($masukan) {
-                return true;
-            } else {
-                return false;
-            }
+            // Pastikan parameter produk valid
+            $produkId = decrypt($request->produk);
+        } catch (\Exception $e) {
+            return back()->with('gagal', 'Produk tidak valid.');
         }
 
+        // Cek apakah produk sudah ada di keranjang user
+        $cek = Pesanan::where('user_id', Auth::id())->where('produk_id', $produkId)->where('status_pembayaran', 'keranjang')->first();
+
+        if ($cek) {
+            return back()->with('gagal', 'Produk sudah ada di keranjang.');
+        }
+
+        // Tambahkan produk ke keranjang
+        $masukan = Pesanan::create([
+            'user_id' => Auth::id(),
+            'produk_id' => $produkId,
+            'status_pembayaran' => 'keranjang',
+        ]);
+
+        if ($masukan) {
+            return back()->with('berhasil', 'Produk berhasil dimasukkan ke keranjang.');
+        }
+
+        return back()->with('gagal', 'Gagal memasukkan produk ke keranjang.');
     }
 
     public function search(Request $request)
     {
+        // Tangani kategori jika ada
+        if ($request->filled('kategory')) {
+            $kategory = Kategory::where('name', 'like', '%' . $request->kategory . '%')->first();
 
-        if ($request->kategory) {
-            $kategory = kategory::where('name','like', '%'.$request->kategory.'%')->first();
-            $kategory_klik = intval(($kategory->dicari));
-
-            $kategory->update([
-                'dicari' => $kategory_klik + 1,
-            ]);
+            if ($kategory) {
+                $kategory->increment('dicari'); // lebih singkat daripada ambil + update
+            }
         }
 
-        if ($request->parameter) {
+        // Tangani parameter pencarian
+        if ($request->filled('parameter')) {
+            // Simpan query pencarian jika belum ada
+            pencarian::firstOrCreate(['parameter' => $request->parameter]);
 
-            if (pencarian::where('parameter', 'LIKE', '%' . $request->parameter . '%')->get()->count() < 1) {
-                pencarian::create([
-                    'parameter' => $request->parameter,
-                ]);
-            }
-
+            // Cari produk menggunakan Laravel Scout / Meilisearch
+            $produkList = Produk::search($request->parameter)->get();
+        } else {
+            // Jika tidak ada parameter, tampilkan semua produk atau kosongkan
+            $produkList = collect(); // koleksi kosong
         }
 
         return view('produk.search', [
-            'produks' => produk::Parameter($request->parameter)->Kategory($kategory->id ?? '')->get(),
+            'produks' => $produkList,
+            // 'kategorys' => Kategory::all(),
+        ]);
+    }
+
+    function profile()
+    {
+        return view('profile.index', [
             'kategorys' => kategory::all(),
         ]);
     }
 
-    function profile() {
-        return view('profile.index',[
-            'kategorys' => kategory::all(),
-        ]);
-    }
-    
-    function updateProfile(Request $request){
+    function updateProfile(Request $request)
+    {
         user::find(Auth::user()->id)->update([
-            'name'=>$request->name,
-            'email'=>$request->email,
-            'contact'=>$request->contact
+            'name' => $request->name,
+            'email' => $request->email,
+            'contact' => $request->contact,
         ]);
 
         return back();
     }
 
-    function forgotPassword() {
+    function forgotPassword()
+    {
         return view('user.forgotPassword');
     }
-    function kirimEmail(Request $request) {
+    function kirimEmail(Request $request)
+    {
+        $cek = User::firstWhere('email', $request->email);
 
-       $cek =  User::firstWhere('email', $request->email);
-
-       if(!$cek){
-        return back()->with('gagal','Email Tidak Ditemukan');
-       }
+        if (!$cek) {
+            return back()->with('gagal', 'Email Tidak Ditemukan');
+        }
         $details = [
             'email' => $request->email,
-            'link'=>env('APP_URL').'/reset-password?auth='.encrypt($cek->id)
+            'link' => env('APP_URL') . '/reset-password?auth=' . encrypt($cek->id),
         ];
-    
+
         Mail::send('email.thameplateemail', ['details' => $details], function ($message) use ($details) {
-            $message->to($details['email'])
-                    ->subject('Forgot Password');
+            $message->to($details['email'])->subject('Forgot Password');
         });
-    
-        return "Link Reset Password Di kirim Ke email";
+
+        return 'Link Reset Password Di kirim Ke email';
     }
 
-    function shopee(Request $request){
-        return view('shopee.index',[
-            'shopes'=>platformAfiliate::find(decrypt($request->param)),
-            'afiliasi'=>platformAfiliate::all(),
-            'kategorys' => kategory::all(),
-        ]);
-    }
-
-    function lihatShopee(Request $request) {
-
-        return view('shopee.produk',[
-            'link_komisi' => decrypt($request->produk),
-            'afiliasi'=>platformAfiliate::all(),
-            'kategorys' => kategory::all(),
-        ]);
-    
-    }
-
-    function downloadQris(Request $request){
+    function downloadQris(Request $request)
+    {
         $decryptFile = decrypt($request->file);
         // return $decryptFile;
         $filename = $decryptFile;
@@ -287,25 +300,59 @@ class mainController extends Controller
         return response()->download($path);
     }
 
-    function resetPassword(Request $request){
-        return view('resetpassword',[
-            'auth'=>$request->auth
+    function resetPassword(Request $request)
+    {
+        return view('resetpassword', [
+            'auth' => $request->auth,
         ]);
     }
 
-    function reset(Request $request)  {
+    function reset(Request $request)
+    {
         if ($request->password != $request->password2) {
             return back()->with('gagal', 'Password Tidak Sama')->withInput();
         }
-       $cek =  User::find(decrypt($request->auth))->update([
-            'password'=>bcrypt($request->password)
+        $cek = User::find(decrypt($request->auth))->update([
+            'password' => bcrypt($request->password),
         ]);
 
-        if($cek){
+        if ($cek) {
             return redirect('/login')->with('berhasil', 'Berhasil Silahkan Login');
-        }
-        else{
+        } else {
             return redirect('/login')->with('gagal', 'Berhasil Silahkan Login');
         }
+    }
+
+    function maintenance()
+    {
+        return view('maintenance');
+    }
+    function notifikasi()
+    {
+        // Ambil semua notifikasi user terbaru dulu
+        $notifikasi = notifikasi::where('user_id', Auth::id())->orderBy('created_at', 'desc')->get();
+
+        return view('user.notifikasi', compact('notifikasi'));
+    }
+
+    function listKategory()
+    {
+        $kategoris = kategory::with([
+            'produk' => function ($query) {
+                $query->inRandomOrder()->limit(2);
+            },
+        ])->get();
+
+        return view('kategory.list', compact('kategoris'));
+    }
+    function team(Request $request)
+    {
+        $user = Auth::user();
+
+        $referralCount = $user->refferals()->where('status', 'active')->count();
+        $points = $user->referralPoints->points ?? 0;
+        $rewards = ReferralReward::all();
+        $referrals = $user->refferals()->with('referredUser')->get();
+        return view('user.akun', compact('user', 'referralCount', 'points', 'rewards', 'referrals'));
     }
 }

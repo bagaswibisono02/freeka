@@ -14,11 +14,9 @@ return new class extends Migration
         Schema::create('alamat_penerimas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id');
-            $table->foreignId('kelurahan_id');
-            $table->text('alamat');
-            $table->text('nama');
+            $table->text('penerima');
             $table->text('contact');
-            $table->text('default')->nullable();
+            $table->text('alamat');
             $table->timestamps();
         });
     }
